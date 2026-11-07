@@ -14,7 +14,7 @@ TempStir
 3. **人机界面**：0.96" OLED（SSD1315，128×64）+ 4 按键，多级菜单设置目标温度/转速/时间。
 4. **参数与时间**：M24C02 EEPROM 保存参数；DS3231 RTC 提供实时时间与秒中断。
 5. **提示与散热**：蜂鸣器（PWM 4kHz，短鸣/长鸣/告警音）；风扇按温度阈值启停。
-6. **通信**：RS485 Modbus RTU（从机）、CAN、蓝牙（UART4）三选/并存。
+6. **通信**：蓝牙（UART4）通信
 7. **故障与保护**：硬件故障锁存（74LVC1G74）读取与复位、故障停机与告警。
 
 <img width="1280" height="2837" alt="60d6cbfce376dead50d187aa65770320" src="https://github.com/user-attachments/assets/741d17aa-c808-419e-a0c9-987517cf5896" />
