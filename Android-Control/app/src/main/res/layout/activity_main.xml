@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 首页：整页可滚动（NestedScrollView），底部 KEY 按键、日志区都能随内容滑动显示。
+     状态卡采用紧凑排版（11/12sp + 4dp 间距），把屏幕高度让给内容。 -->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scrollRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fillViewport="true"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/textMain" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="BLE GATT / FFF0 · Modbus RTU 透传 · 对应面板 KEY1~KEY4"
+            android:textSize="10sp"
+            android:textColor="@color/textSub"
+            android:layout_marginBottom="6dp" />
+
+        <TextView
+            android:id="@+id/tvConn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="未连接"
+            android:textSize="13sp"
+            android:textColor="@color/textMain"
+            android:background="@drawable/bg_status"
+            android:padding="7dp"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/btnConnect"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="2"
+                android:text="扫描 / 连接设备"
+                android:textSize="13sp"
+                android:textColor="@android:color/white"
+                android:background="@drawable/btn_key"
+                android:layout_marginEnd="6dp" />
+
+            <Button
+                android:id="@+id/btnDisconnect"
+                android:layout_width="0dp"
+                android:layout_height="42dp"
+                android:layout_weight="1"
+                android:text="断开"
+                android:textSize="13sp"
+                android:textColor="@color/textMain"
+                android:background="@drawable/btn_ghost" />
+        </LinearLayout>
+
+        <!-- ================= 下位机实时状态（紧凑） ================= -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="8dp"
+            android:layout_marginBottom="6dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="下位机实时状态（每 1 秒轮询 · IMU 4 秒）"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/textSub"
+                android:layout_marginBottom="3dp" />
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <TextView style="@style/RowLabelS" android:text="液温 设定 / 实测" />
+                <TextView android:id="@+id/tvLiquid" style="@style/RowValueS" android:text="--" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <TextView style="@style/RowLabelS" android:text="转速 设定 / 实测" />
+                <TextView android:id="@+id/tvSpeed" style="@style/RowValueS" android:text="--" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <TextView style="@style/RowLabelS" android:text="铝板温度（只读）" />
+                <TextView android:id="@+id/tvPlate" style="@style/RowValueS" android:text="--" />
+            </LinearLayout>
+
+            <!-- P9 新增：倾斜角（= max(|roll|,|pitch|)），超过门限时变红显示"超限" -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <TextView style="@style/RowLabelS" android:text="倾斜角 当前 / 门限" />
+                <TextView android:id="@+id/tvTilt" style="@style/RowValueS" android:text="--" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <TextView style="@style/RowLabelS" android:text="设定 / 剩余时间" />
+                <TextView android:id="@+id/tvTime" style="@style/RowValueS" android:text="--" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <TextView style="@style/RowLabelS" android:text="加热 / 电机占空比" />
+                <TextView android:id="@+id/tvPct" style="@style/RowValueS" android:text="--" />
+            </LinearLayout>
+
+            <!-- P9：六轴 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <TextView style="@style/RowLabelS" android:text="六轴 加速度(mg)" />
+                <TextView android:id="@+id/tvImuAcc" style="@style/RowValueS" android:text="--" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <TextView style="@style/RowLabelS" android:text="六轴 角速度(dps)" />
+                <TextView android:id="@+id/tvImuGyro" style="@style/RowValueS" android:text="--" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <TextView style="@style/RowLabelS" android:text="姿态 / 振动" />
+                <TextView android:id="@+id/tvImuAtt" style="@style/RowValueS" android:text="--" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvImuMisc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:lineSpacingExtra="1dp"
+                android:text="--"
+                android:textColor="@color/textMain"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnImuCal"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:layout_marginTop="4dp"
+                android:text="IMU 零偏标定（保持静止 2 秒）"
+                android:textSize="11sp"
+                android:textColor="@color/textMain"
+                android:background="@drawable/btn_ghost" />
+
+            <!-- A5：六轴门限 / 现场可调参数（固件 >= 1.3） -->
+            <Button
+                android:id="@+id/btnParam"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:layout_marginTop="4dp"
+                android:text="六轴门限 / 参数设置"
+                android:textSize="11sp"
+                android:textColor="@color/textMain"
+                android:background="@drawable/btn_ghost" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="系统状态"
+                android:textColor="@color/textSub"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/tvSys"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingExtra="1dp"
+                android:text="--"
+                android:textColor="@color/textMain"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="故障码"
+                android:textColor="@color/textSub"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/tvFault"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingExtra="1dp"
+                android:text="--"
+                android:textColor="@color/textMain"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- ================= 当前调节项（紧凑） ================= -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card_focus"
+            android:padding="8dp"
+            android:layout_marginBottom="6dp">
+
+            <TextView
+                android:id="@+id/tvFocusLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="当前调节项：转速"
+                android:textSize="11sp"
+                android:textColor="@color/textSub" />
+
+            <TextView
+                android:id="@+id/tvFocusValue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="0 rpm"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:textColor="@color/accent"
+                android:paddingTop="1dp"
+                android:paddingBottom="1dp" />
+
+            <TextView
+                android:id="@+id/tvFocusHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="KEY1 切换焦点 · KEY2 加 · KEY3 减 · 长按连发"
+                android:textSize="10sp"
+                android:textColor="@color/textSub" />
+        </LinearLayout>
+
+        <!-- ================= 4 个按键（随页面滚动，不再被挤掉） ================= -->
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:rowCount="2"
+            android:layout_marginBottom="6dp">
+
+            <Button
+                android:id="@+id/btnKey1"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="3dp"
+                android:text="KEY1\n切换焦点"
+                android:textSize="13sp"
+                android:textColor="@android:color/white"
+                android:background="@drawable/btn_key" />
+
+            <Button
+                android:id="@+id/btnKey2"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="3dp"
+                android:text="KEY2\n参数 +"
+                android:textSize="13sp"
+                android:textColor="@android:color/white"
+                android:background="@drawable/btn_key" />
+
+            <Button
+                android:id="@+id/btnKey3"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="3dp"
+                android:text="KEY3\n参数 −"
+                android:textSize="13sp"
+                android:textColor="@android:color/white"
+                android:background="@drawable/btn_key" />
+
+            <Button
+                android:id="@+id/btnKey4"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_columnWeight="1"
+                android:layout_margin="3dp"
+                android:text="KEY4\n启动"
+                android:textSize="13sp"
+                android:textColor="@android:color/white"
+                android:background="@drawable/btn_run" />
+        </GridLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="3dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="通信日志（TX / RX HEX）"
+                android:textSize="10sp"
+                android:textColor="@color/textSub" />
+
+            <Button
+                android:id="@+id/btnClearLog"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="清空"
+                android:textSize="11sp"
+                android:textColor="@color/textMain"
+                android:background="@drawable/btn_ghost" />
+        </LinearLayout>
+
+        <!-- 日志区：固定高度 + 内部可独立滚动（外层整页也可滚动） -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/scrollLog"
+            android:layout_width="match_parent"
+            android:layout_height="190dp"
+            android:background="@drawable/bg_log"
+            android:padding="6dp"
+            android:fillViewport="true">
+
+            <TextView
+                android:id="@+id/tvLog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:typeface="monospace"
+                android:textSize="10sp"
+                android:lineSpacingExtra="1dp"
+                android:textColor="@color/logText"
+                android:text="" />
+        </androidx.core.widget.NestedScrollView>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

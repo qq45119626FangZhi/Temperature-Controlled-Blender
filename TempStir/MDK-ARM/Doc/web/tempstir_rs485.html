@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TempStir 控制台 · RS485 / Modbus RTU</title>
+<style>
+  :root{
+    --bg:#f2f4f8; --card:#ffffff; --line:#e3e8ef; --txt:#1b2333; --sub:#6b7688;
+    --blue:#1a63e8; --blue-d:#1550c0; --green:#1f9d4d; --red:#d93b3b; --grey:#e6e9ef;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0; background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:18px 16px 40px;}
+  h1{font-size:26px; margin:6px 0 4px; letter-spacing:.5px;}
+  .sub{color:var(--sub); font-size:13px; line-height:1.6; margin-bottom:14px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px;}
+  .statusbar{
+    display:flex; align-items:center; gap:10px; font-size:15px; padding:12px 14px;
+    background:#fff; border:1px solid var(--line); border-radius:12px; margin-bottom:10px;
+  }
+  .dot{width:9px; height:9px; border-radius:50%; background:#c3c9d4; flex:none;}
+  .dot.on{background:var(--green); box-shadow:0 0 0 3px rgba(31,157,77,.15);}
+  .dot.err{background:var(--red);}
+  .row{display:flex; gap:10px;}
+  button{
+    font-family:inherit; font-size:16px; font-weight:600; border:none; border-radius:12px;
+    padding:14px 10px; cursor:pointer; transition:.12s; color:#fff; background:var(--blue);
+  }
+  button:active{transform:scale(.985);}
+  button:disabled{background:#c8cfdb !important; color:#f4f6fa; cursor:not-allowed;}
+  button.ghost{background:var(--grey); color:#2b3444;}
+  .grow{flex:1;}
+  .card-title{font-size:14px; color:var(--sub); margin:0 0 10px;}
+  .kv{display:flex; justify-content:space-between; align-items:baseline; font-size:16px; padding:7px 0;}
+  .kv .k{color:#3a4356;}
+  .kv .v{font-variant-numeric:tabular-nums; font-weight:600;}
+  .kv .v.muted{color:var(--sub); font-weight:500;}
+  .focus-card{
+    background:#eaf1fe; border:1px solid #cfe0fd; border-radius:16px; padding:16px 14px 12px;
+    text-align:center; margin-bottom:12px;
+  }
+  .focus-card .name{font-size:14px; color:#3d5a92;}
+  .focus-card .big{font-size:40px; font-weight:700; color:var(--blue); margin:6px 0 4px; font-variant-numeric:tabular-nums;}
+  .focus-card .hint{font-size:12px; color:#5b6b86;}
+  .keys{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .keys button{padding:18px 8px; font-size:17px; line-height:1.35;}
+  #key4{background:var(--green);}
+  #key4.stop{background:var(--red);}
+  .log-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .log-head span{font-size:14px; color:var(--sub);}
+  .log-head button{font-size:14px; padding:8px 16px; font-weight:500;}
+  #log{
+    height:170px; overflow:auto; background:#0e1622; border-radius:10px; padding:10px;
+    font-family:ui-monospace,Consolas,"Courier New",monospace; font-size:12px; line-height:1.65;
+    color:#cfe0f5; white-space:pre-wrap; word-break:break-all;
+  }
+  #log .tx{color:#7fd3ff;}
+  #log .rx{color:#9ae6a8;}
+  #log .err{color:#ff9a9a;}
+  #log .info{color:#8f9db3;}
+  .small{font-size:12px; color:var(--sub);}
+  .warn{background:#fff5e6; border:1px solid #ffe0b3; color:#8a5a00; font-size:13px; padding:10px 12px; border-radius:10px; margin-bottom:12px; line-height:1.6;}
+  .device-info{font-size:12px; color:var(--sub); margin-top:10px; border-top:1px dashed var(--line); padding-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>TempStir 控制台</h1>
+  <div class="sub">USB 转 RS485 · Modbus RTU 从机 1 · 9600 8N1<br/>功能与蓝牙 App 一致：状态轮询 + 参数调节 + 启停</div>
+
+  <div id="browserWarn" class="warn" style="display:none"></div>
+
+  <div class="statusbar">
+    <div id="dot" class="dot"></div>
+    <div id="connText" class="grow">未连接</div>
+  </div>
+
+  <div class="row" style="margin-bottom:12px">
+    <button id="btnConnect" class="grow">连接串口</button>
+    <button id="btnDisconnect" class="ghost" style="width:110px" disabled>断开</button>
+  </div>
+
+  <div class="card">
+    <p class="card-title">下位机实时状态（每 1 秒轮询）</p>
+    <div class="kv"><div class="k">液温 设定 / 实测</div><div class="v" id="vTemp">-- ℃ / -- ℃</div></div>
+    <div class="kv"><div class="k">转速 设定 / 实测</div><div class="v" id="vSpeed">-- / -- rpm</div></div>
+    <div class="kv"><div class="k">铝板温度（只读）</div><div class="v" id="vPlate">-- ℃</div></div>
+    <div class="kv"><div class="k">设定 / 剩余时间</div><div class="v" id="vTime">-- / -- s</div></div>
+    <div class="kv"><div class="k">加热 / 电机 占空比</div><div class="v" id="vPwm">-- % / -- %</div></div>
+    <div class="kv"><div class="k">系统状态</div><div class="v muted" id="vState">--</div></div>
+    <div class="kv"><div class="k">故障码</div><div class="v muted" id="vFault">--</div></div>
+    <div class="device-info" id="vDevInfo">设备信息：--</div>
+  </div>
+
+  <!-- A6：六轴 / 现场可调参数区块（0x0020~0x003F，固件 >= 1.2；0x003A 起需 >= 1.3） -->
+  <div class="card">
+    <p class="card-title">六轴 / 参数（0x0020~0x003F，固件 ≥1.2）</p>
+    <div class="kv"><div class="k">加速度 X/Y/Z</div><div class="v" id="vAcc">--</div></div>
+    <div class="kv"><div class="k">角速度 X/Y/Z</div><div class="v" id="vGyro">--</div></div>
+    <div class="kv"><div class="k">姿态 R/P/Y</div><div class="v" id="vAtt">--</div></div>
+    <div class="kv"><div class="k">振动 RMS / 门限</div><div class="v" id="vVib">--</div></div>
+    <div class="kv"><div class="k">打滑偏差 / 门限</div><div class="v" id="vSlip">--</div></div>
+    <div class="kv"><div class="k">斜坡 状态 / 指令</div><div class="v" id="vRamp">--</div></div>
+    <div class="kv"><div class="k">加速 / 减速耗时</div><div class="v" id="vRampT">--</div></div>
+    <div class="kv"><div class="k">加热过流阈值</div><div class="v" id="vHeatOc">--</div></div>
+    <div class="kv"><div class="k">堵转辅助 / 实测统计</div><div class="v" id="vAssist">--</div></div>
+    <div class="kv"><div class="k">IMU 状态位</div><div class="v muted" id="vImuSt">--</div></div>
+
+    <div style="margin-top:10px">
+      <div class="small" style="margin-bottom:6px">现场可调（写 0x0033~0x0036 / 0x003A，掉电保存）</div>
+      <div class="kv"><div class="k">打滑门限(0.1%)</div>
+        <input id="pSlip" type="number" style="width:110px" /></div>
+      <div class="kv"><div class="k">振动门限(mg)</div>
+        <input id="pVib" type="number" style="width:110px" /></div>
+      <div class="kv"><div class="k">倾斜门限(0.1°)</div>
+        <input id="pTilt" type="number" style="width:110px" /></div>
+      <div class="kv"><div class="k">加减速斜率(rpm/s)</div>
+        <input id="pAlpha" type="number" style="width:110px" /></div>
+      <div class="kv"><div class="k">加热过流(raw)</div>
+        <input id="pOc" type="number" style="width:110px" /></div>
+      <div class="row" style="margin-top:8px">
+        <button id="btnParamWrite" class="grow">下发参数</button>
+        <button id="btnAssist" class="ghost" style="width:120px">辅助堵转</button>
+        <button id="btnTune" class="ghost" style="width:120px">统计打印</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="focus-card">
+    <div class="name" id="focusName">当前调节项：--</div>
+    <div class="big" id="focusValue">--</div>
+    <div class="hint" id="focusHint">KEY1 切换 · KEY2 + · KEY3 − · 长按连发</div>
+  </div>
+
+  <div class="keys" style="margin-bottom:12px">
+    <button id="key1">KEY1<br/>切换焦点</button>
+    <button id="key2">KEY2<br/>参数 +</button>
+    <button id="key3">KEY3<br/>参数 −</button>
+    <button id="key4">KEY4<br/>启动</button>
+  </div>
+
+  <div class="card">
+    <div class="log-head">
+      <span>通信日志（TX / RX HEX）</span>
+      <button id="btnClear" class="ghost">清空</button>
+    </div>
+    <div id="log"></div>
+  </div>
+
+  <div class="small">
+    提示：本页需要 Chrome / Edge（Web Serial），并通过 http://localhost 或 https 打开；
+    COM 口同一时间只能被一个程序占用（先关掉 SSCOM / Modbus Poll）。
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ================= 配置 ================= */
+const SLAVE = 0x01;          // 从机地址
+const BAUDRATE = 9600;       // 与固件一致
+const POLL_MS = 1000;        // 状态轮询周期
+const TX_TIMEOUT = 700;      // 单次事务超时(ms)
+
+/* 寄存器地址（与 app_modbus.h 一致） */
+const R = {
+  CUR_TEMP: 0x0000, TARGET_TEMP: 0x0001, CUR_SPEED: 0x0002, TARGET_SPEED: 0x0003,
+  REMAIN: 0x0004, SYS_STATE: 0x0005, FAULT: 0x0006, CMD: 0x0007,
+  PLATE_TEMP: 0x0008, HEAT_PCT: 0x0009, MOTOR_PCT: 0x000A, SET_TIME: 0x000B,
+  FAN: 0x000C, DEV_LO: 0x000D, DEV_HI: 0x000E, FW_VER: 0x000F,
+  SLAVE_ADDR: 0x0010, BAUD_CODE: 0x0011, RUN_LO: 0x0012, RUN_HI: 0x0013,
+  UI_FOCUS: 0x0014, PLATE_LIMIT: 0x0015
+};
+const POLL_COUNT = 0x0016;   // 0x0000~0x0015 共 22 个寄存器，一次读回
+
+/* A6：六轴 / 参数区块 0x0020~0x003F（32 个寄存器一次读回；旧固件返回 02 时自动停读）
+ * 相对 0x0020 的索引：0~2 加速度、3~5 角速度、6~8 R/P/Y、9 温度、10 状态、11 振动、
+ * 12 角加速度、13 斜坡状态、14 斜坡指令、15 打滑偏差、16 控制字(0x0030)、
+ * 19 斜率(0x0033)、20 打滑门限、21 振动门限、22 倾斜门限、23 加速耗时、24 减速耗时、
+ * 25 峰值角加速度、26 过流阈值(0x003A)、27 堵转辅助(0x003B)、28 统计控制(0x003C) */
+const IMU_START = 0x0020;
+const IMU_COUNT = 0x0020;
+let imuSupported = true;     // 旧固件（<1.2）读不到就置 false，避免每秒报错
+let imuFilled = false;       // 参数输入框只自动填一次，避免覆盖用户正在输入的值
+let lastImu = null;          // 最近一次 0x0020~0x003F 原始数组
+
+/* 状态位 */
+const ST = {
+  MOTOR: 0x0001, HEAT: 0x0002, FAN: 0x0004, FAULT: 0x0008,
+  TIMING: 0x0010, RTC: 0x0020, PANEL: 0x0040, BLE: 0x0100, HEAT_DONE: 0x0200
+};
+const FAULT_NAME = [
+  [0x0001, "加热硬件故障"], [0x0002, "加热过流"], [0x0004, "液体 NTC 异常"],
+  [0x0008, "铝板 NTC 异常"], [0x0010, "铝板限温"], [0x0020, "电机堵转"],
+  [0x0040, "EEPROM 异常"], [0x0080, "RTC 掉电丢时"]
+];
+
+/* 调节项定义：与面板焦点 0..3 对应 */
+const FOCUS = [
+  { name: "转速",       reg: R.TARGET_SPEED, step: 5,  min: 0,    max: 500,   stepText: "5 rpm" },
+  { name: "铝板上限",   reg: R.PLATE_LIMIT,  step: 1,  min: 0,    max: 120,   stepText: "1 ℃（0 与 35 之间跳变）", plate: true },
+  { name: "液温设定",   reg: R.TARGET_TEMP,  step: 10, min: 0,    max: 1000,  stepText: "1.0 ℃" },
+  { name: "定时设定",   reg: R.SET_TIME,     step: 10, min: 0,    max: 999,   stepText: "10 s" }
+];
+
+/* ================= 全局状态 ================= */
+let port = null;
+let writer = null;
+let reader = null;
+let keepReading = false;
+let busy = false;            // 事务互斥
+let pending = null;          // {resolve,reject,timer}
+let rxBuf = [];
+let lastRegs = null;         // 最近一次读回的寄存器数组
+
+/* ================= 工具函数 ================= */
+function crc16(bytes, len) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < len; i++) {
+    crc ^= bytes[i];
+    for (let b = 0; b < 8; b++) {
+      crc = (crc & 1) ? ((crc >> 1) ^ 0xA001) : (crc >> 1);
+    }
+  }
+  return crc & 0xFFFF;
+}
+function withCrc(body) {
+  const crc = crc16(body, body.length);
+  return Uint8Array.from([...body, crc & 0xFF, (crc >> 8) & 0xFF]);
+}
+function hex(arr) {
+  return Array.from(arr).map(b => b.toString(16).toUpperCase().padStart(2, "0")).join(" ");
+}
+function toI16(u) { return (u & 0x8000) ? (u - 0x10000) : u; }
+function c10(c) { return (c / 10).toFixed(1); }
+
+const logEl = document.getElementById("log");
+function log(kind, text) {
+  const t = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+  const span = document.createElement("span");
+  span.className = kind;
+  span.textContent = `[${t}] ${kind.toUpperCase().padEnd(4)} ${text}\n`;
+  logEl.appendChild(span);
+  if (logEl.childElementCount > 250) logEl.removeChild(logEl.firstChild);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+/* ================= 串口与帧收发 ================= */
+function tryParseFrame(buf) {
+  if (buf.length < 5) return { s: "need" };
+  if (buf[0] !== SLAVE) return { s: "skip" };
+
+  const fn = buf[1] & 0x7F;
+  let len;
+  if (buf[1] & 0x80) {
+    len = 5;                                     // 异常响应
+  } else if (fn === 0x03) {
+    if (buf.length < 3) return { s: "need" };
+    len = 3 + buf[2] + 2;
+  } else if (fn === 0x06 || fn === 0x10) {
+    len = 8;
+  } else {
+    return { s: "skip" };
+  }
+  if (buf.length < len) return { s: "need" };
+
+  const frame = buf.slice(0, len);
+  const calc = crc16(frame, len - 2);
+  const recv = frame[len - 2] | (frame[len - 1] << 8);
+  if (calc !== recv) return { s: "skip" };
+  return { s: "ok", frame, len };
+}
+
+function handleFrame(frame) {
+  log("rx", hex(frame));
+  if (pending) {
+    const p = pending;
+    pending = null;
+    clearTimeout(p.timer);
+    p.resolve(frame);
+  }
+}
+
+async function readLoop() {
+  while (port && port.readable && keepReading) {
+    reader = port.readable.getReader();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+        for (const b of value) rxBuf.push(b);
+        let guard = 0;
+        while (rxBuf.length && guard++ < 4096) {
+          const r = tryParseFrame(rxBuf);
+          if (r.s === "need") break;
+          if (r.s === "skip") { rxBuf.shift(); continue; }
+          handleFrame(r.frame);
+          rxBuf.splice(0, r.len);
+        }
+      }
+    } catch (e) {
+      if (keepReading) log("err", "读取异常：" + e.message);
+    } finally {
+      try { reader.releaseLock(); } catch (_) {}
+      reader = null;
+    }
+  }
+}
+
+/* 发送一帧并等待应答（同一时刻只允许一个事务） */
+function transact(body) {
+  return new Promise(async (resolve, reject) => {
+    if (!writer) return reject(new Error("串口未打开"));
+    if (busy) return reject(new Error("总线忙"));
+    busy = true;
+    rxBuf = [];
+    const frame = withCrc(body);
+    log("tx", hex(frame));
+    pending = {
+      resolve: (resp) => { busy = false; resolve(resp); },
+      timer: setTimeout(() => {
+        pending = null;
+        busy = false;
+        reject(new Error("超时（无应答）"));
+      }, TX_TIMEOUT)
+    };
+    try {
+      await writer.write(frame);
+    } catch (e) {
+      clearTimeout(pending.timer);
+      pending = null;
+      busy = false;
+      reject(e);
+    }
+  });
+}
+
+async function connect() {
+  if (!("serial" in navigator)) {
+    log("err", "当前浏览器不支持 Web Serial，请用 Chrome / Edge");
+    return;
+  }
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: BAUDRATE, dataBits: 8, stopBits: 1, parity: "none", flowControl: "none" });
+    writer = port.writable.getWriter();
+    keepReading = true;
+    readLoop();
+    setConnected(true, "已连接 · 9600 8N1 · 从机 1");
+    startPolling();
+  } catch (e) {
+    log("err", "连接失败：" + e.message);
+    setConnected(false, "未连接");
+  }
+}
+
+async function disconnect() {
+  stopPolling();
+  keepReading = false;
+  try { if (reader) await reader.cancel(); } catch (_) {}
+  try { if (writer) writer.releaseLock(); } catch (_) {}
+  writer = null;
+  try { if (port) await port.close(); } catch (_) {}
+  port = null;
+  pending = null;
+  busy = false;
+  setConnected(false, "未连接");
+}
+
+function setConnected(on, text) {
+  document.getElementById("dot").className = "dot" + (on ? " on" : "");
+  document.getElementById("connText").textContent = text;
+  document.getElementById("btnConnect").disabled = on;
+  document.getElementById("btnDisconnect").disabled = !on;
+  document.querySelectorAll("#key1,#key2,#key3,#key4").forEach(b => { b.disabled = !on; });
+}
+
+/* ================= 轮询与解析 ================= */
+let pollTimer = null;
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(pollOnce, POLL_MS);
+  pollOnce();
+}
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+async function pollOnce() {
+  if (!writer || busy) return;
+  try {
+    const resp = await transact([SLAVE, 0x03, 0x00, 0x00, 0x00, POLL_COUNT]);
+    if (resp[1] & 0x80) { log("err", "读状态异常码 " + resp[2]); return; }
+    if (resp[2] !== POLL_COUNT * 2) { log("err", "应答长度异常 byteCount=" + resp[2]); return; }
+    const regs = [];
+    for (let i = 0; i < POLL_COUNT; i++) regs.push((resp[3 + i * 2] << 8) | resp[4 + i * 2]);
+    lastRegs = regs;
+    renderStatus(regs);
+  } catch (e) {
+    log("err", "轮询失败：" + e.message);
+    return;
+  }
+
+  /* A6：追加读六轴/参数区块（不阻塞基础状态；旧固件自动停读） */
+  if (!imuSupported) return;
+  try {
+    const r2 = await transact([SLAVE, 0x03, (IMU_START >> 8) & 0xFF, IMU_START & 0xFF,
+                               0x00, IMU_COUNT]);
+    if (r2[1] & 0x80) {
+      imuSupported = false;
+      log("err", "六轴区块不支持（固件 <1.2），已停止读取");
+      return;
+    }
+    if (r2[2] !== IMU_COUNT * 2) {
+      log("err", "六轴应答长度异常 byteCount=" + r2[2]);
+      return;
+    }
+    const regs2 = [];
+    for (let i = 0; i < IMU_COUNT; i++) regs2.push((r2[3 + i * 2] << 8) | r2[4 + i * 2]);
+    renderImu(regs2);
+  } catch (e) {
+    log("err", "六轴读取失败：" + e.message);
+  }
+}
+
+/* A6：六轴 / 参数区块渲染（regs2[0] 对应 0x0020） */
+function renderImu(g) {
+  lastImu = g;
+  const i16 = (idx) => toI16(g[idx]);
+  document.getElementById("vAcc").textContent =
+    `${i16(0)} / ${i16(1)} / ${i16(2)} mg`;
+  document.getElementById("vGyro").textContent =
+    `${c10(i16(3))} / ${c10(i16(4))} / ${c10(i16(5))} dps`;
+  document.getElementById("vAtt").textContent =
+    `${c10(i16(6))}° / ${c10(i16(7))}° / ${c10(i16(8))}°（片内 ${c10(i16(9))}℃）`;
+  document.getElementById("vVib").textContent = `${g[11]} / ${g[21]} mg`;
+  document.getElementById("vSlip").textContent =
+    `${c10(i16(15))}% / ${c10(g[20])}%`;
+  const rampName = ["停", "加速", "匀速", "减速"][g[13]] || "?";
+  document.getElementById("vRamp").textContent =
+    `${rampName} / ${i16(14)} rpm`;
+  document.getElementById("vRampT").textContent =
+    `${g[23]} ms / ${g[24]} ms（峰值 α ${c10(i16(25))} dps/s）`;
+  document.getElementById("vHeatOc").textContent = `${g[26]} raw`;
+  document.getElementById("vAssist").textContent =
+    `${(g[27] & 0x0001) ? "开" : "关"} / ${(g[28] & 0x0001) ? "打印中" : "关"}`;
+  const st = g[10];
+  const bits = [];
+  if (st & 0x0001) bits.push("有效");
+  if (st & 0x0002) bits.push("静止");
+  if (st & 0x0004) bits.push("转动");
+  if (st & 0x0008) bits.push("振动");
+  if (st & 0x0010) bits.push("倾斜");
+  if (st & 0x0040) bits.push("已标定");
+  if (st & 0x0080) bits.push("打滑");
+  if (st & 0x0100) bits.push("倾斜锁存");
+  document.getElementById("vImuSt").textContent =
+    `0x${st.toString(16).toUpperCase().padStart(4, "0")}${bits.length ? " · " + bits.join(" · ") : ""}`;
+
+  if (!imuFilled) {
+    document.getElementById("pSlip").value = g[20];
+    document.getElementById("pVib").value = g[21];
+    document.getElementById("pTilt").value = g[22];
+    document.getElementById("pAlpha").value = g[19];
+    document.getElementById("pOc").value = g[26];
+    imuFilled = true;
+  }
+}
+
+/* A6/A4：下发现场可调参数（逐个 06 写，固件侧掉电保存） */
+async function writeParams() {
+  if (!imuSupported) { log("err", "当前固件不支持六轴/参数区块"); return; }
+  const items = [
+    [0x0034, "打滑门限", parseInt(document.getElementById("pSlip").value, 10)],
+    [0x0035, "振动门限", parseInt(document.getElementById("pVib").value, 10)],
+    [0x0036, "倾斜门限", parseInt(document.getElementById("pTilt").value, 10)],
+    [0x0033, "加减速斜率", parseInt(document.getElementById("pAlpha").value, 10)],
+    [0x003A, "加热过流阈值", parseInt(document.getElementById("pOc").value, 10)]
+  ];
+  for (const [reg, name, val] of items) {
+    if (!Number.isFinite(val)) { log("err", `${name} 不是有效整数`); continue; }
+    await writeReg(reg, val & 0xFFFF, `${name} = ${val}`);
+  }
+  imuFilled = false;   // 允许下一拍把固件回读值重新填回输入框
+  pollOnce();
+}
+
+function renderStatus(r) {
+  const liq = toI16(r[R.CUR_TEMP]);
+  const liqT = toI16(r[R.TARGET_TEMP]);
+  const spd = toI16(r[R.CUR_SPEED]);
+  const spdT = toI16(r[R.TARGET_SPEED]);
+  const plate = toI16(r[R.PLATE_TEMP]);
+
+  document.getElementById("vTemp").textContent =
+    `${c10(liqT)} ℃ / ${liq === -32768 ? "--" : c10(liq)} ℃`;
+  document.getElementById("vSpeed").textContent = `${spdT} / ${spd} rpm`;
+  document.getElementById("vPlate").textContent = plate === -32768 ? "-- ℃" : c10(plate) + " ℃";
+  document.getElementById("vTime").textContent = `${r[R.SET_TIME]} / ${r[R.REMAIN]} s`;
+  document.getElementById("vPwm").textContent = `${r[R.HEAT_PCT]}% / ${r[R.MOTOR_PCT]}%`;
+
+  const st = r[R.SYS_STATE];
+  const stTxt = [];
+  stTxt.push((st & ST.MOTOR) ? "运行" : "待机");
+  if (st & ST.HEAT) stTxt.push("加热中");
+  if (st & ST.FAN) stTxt.push("风扇");
+  if (st & ST.TIMING) stTxt.push("计时中");
+  if (st & ST.FAULT) stTxt.push("故障");
+  if (st & ST.RTC) stTxt.push("RTC有效");
+  if (st & ST.PANEL) stTxt.push("面板操作");
+  if (st & ST.HEAT_DONE) stTxt.push("到温完成");
+  if (st & ST.BLE) stTxt.push("蓝牙在线");
+  document.getElementById("vState").textContent = stTxt.join(" · ");
+
+  const flt = r[R.FAULT];
+  if (flt === 0) {
+    document.getElementById("vFault").textContent = "无";
+  } else {
+    const names = FAULT_NAME.filter(([b]) => flt & b).map(([, n]) => n);
+    document.getElementById("vFault").textContent =
+      `${names.join("、")} (0x${flt.toString(16).toUpperCase().padStart(4, "0")})`;
+  }
+
+  const ver = r[R.FW_VER];
+  document.getElementById("vDevInfo").textContent =
+    `固件 v${(ver >> 8)}.${ver & 0xFF} · 从机 ${r[R.SLAVE_ADDR]} · ID 0x` +
+    ((r[R.DEV_HI] << 16 | r[R.DEV_LO]) >>> 0).toString(16).toUpperCase() +
+    ` · 累计 ${(r[R.RUN_HI] * 65536 + r[R.RUN_LO])} s`;
+
+  renderFocus(r);
+  // KEY4 文案随运行状态变化
+  const k4 = document.getElementById("key4");
+  const running = (st & ST.MOTOR) ? true : false;
+  k4.textContent = running ? "KEY4\n停止" : "KEY4\n启动";
+  k4.classList.toggle("stop", running);
+}
+
+function focusIndex(r) {
+  const f = r ? r[R.UI_FOCUS] : 0;
+  return (f >= 0 && f <= 3) ? f : 0;
+}
+
+function renderFocus(r) {
+  const i = focusIndex(r);
+  const f = FOCUS[i];
+  const val = focusValue(i, r);
+
+  document.getElementById("focusName").textContent =
+    `当前调节项：${f.name}　[寄存器 0x${f.reg.toString(16).toUpperCase().padStart(4, "0")}]`;
+  document.getElementById("focusValue").textContent = displayValue(i, val);
+  document.getElementById("focusHint").textContent =
+    `KEY1 切换 · KEY2 +${f.stepText} · KEY3 −${f.stepText} · 长按连发`;
+}
+
+function displayValue(i, v) {
+  if (i === 0) return `${v} rpm`;
+  if (i === 1) return v === 0 ? "不限制" : `${v} ℃`;
+  if (i === 2) return `${(v / 10).toFixed(1)} ℃`;
+  if (i === 3) return `${v} s`;
+  return String(v);
+}
+
+function focusValue(i, r) {
+  if (!r) return 0;
+  if (i === 0) return toI16(r[R.TARGET_SPEED]);
+  if (i === 1) return r[R.PLATE_LIMIT];
+  if (i === 2) return toI16(r[R.TARGET_TEMP]);
+  return r[R.SET_TIME];
+}
+
+/* ================= 键盘操作 ================= */
+async function writeReg(reg, value, note) {
+  if (!writer) return;
+  try {
+    const resp = await transact([SLAVE, 0x06, (reg >> 8) & 0xFF, reg & 0xFF,
+                                 (value >> 8) & 0xFF, value & 0xFF]);
+    if (resp[1] & 0x80) {
+      const code = resp[2];
+      const map = { 0x02: "非法数据地址（只读或未定义寄存器）",
+                    0x04: "数值非法 / 保护联锁拒绝",
+                    0x06: "从机忙（面板 8s 占用窗口）" };
+      log("err", `写 0x${reg.toString(16).toUpperCase()} = ${value} 失败：${map[code] || "异常码 " + code}`);
+      return false;
+    }
+    log("info", `✓ ${note} → 0x${reg.toString(16).toUpperCase().padStart(4, "0")} = ${value}`);
+    return true;
+  } catch (e) {
+    log("err", `写 0x${reg.toString(16).toUpperCase()} 失败：${e.message}`);
+    return false;
+  }
+}
+
+async function key1SwitchFocus() {
+  const cur = focusIndex(lastRegs);
+  const next = (cur + 1) % 4;
+  await writeReg(R.UI_FOCUS, next, `切换焦点 → ${FOCUS[next].name}`);
+  pollOnce();
+}
+
+async function keyAdjust(dir) {
+  if (!lastRegs) { log("err", "尚未读到状态，稍候再试"); return; }
+  const i = focusIndex(lastRegs);
+  const f = FOCUS[i];
+  const cur = focusValue(i, lastRegs);
+  let next;
+
+  if (f.plate) {
+    // 铝板上限：0（不限制）↔ 35~120℃，中间 1~34℃ 固件会拒绝
+    if (cur === 0 && dir > 0) next = 35;
+    else if (cur <= 35 && dir < 0) next = 0;
+    else {
+      next = cur + dir * f.step;
+      if (next < 35) next = 0;
+    }
+  } else {
+    next = cur + dir * f.step;
+  }
+
+  if (next < f.min) next = f.min;
+  if (next > f.max) next = f.max;
+  if (next === cur) return;
+
+  await writeReg(f.reg, next, `${f.name} ${displayValue(i, cur)} → ${displayValue(i, next)}`);
+  pollOnce();
+}
+
+async function key4RunStop() {
+  if (!lastRegs) { log("err", "尚未读到状态，稍候再试"); return; }
+  const running = (lastRegs[R.SYS_STATE] & ST.MOTOR) ? true : false;
+  const cmd = running ? 0x0002 : 0x0001;
+  await writeReg(R.CMD, cmd, running ? "停止" : "启动");
+  pollOnce();
+}
+
+/* 长按连发：按下 500ms 后每 120ms 触发一次 */
+function bindRepeat(el, fn) {
+  let holdTimer = null, repTimer = null, fired = false;
+
+  const start = (ev) => {
+    ev.preventDefault();
+    fired = false;
+    fn();
+    fired = true;
+    holdTimer = setTimeout(() => {
+      repTimer = setInterval(fn, 120);
+    }, 500);
+  };
+  const stop = () => {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    if (repTimer) { clearInterval(repTimer); repTimer = null; }
+  };
+  el.addEventListener("mousedown", start);
+  el.addEventListener("touchstart", start, { passive: false });
+  ["mouseup", "mouseleave", "touchend", "touchcancel"].forEach(e => el.addEventListener(e, stop));
+}
+
+/* ================= 事件绑定 ================= */
+document.getElementById("btnConnect").addEventListener("click", connect);
+document.getElementById("btnDisconnect").addEventListener("click", disconnect);
+document.getElementById("btnClear").addEventListener("click", () => { logEl.textContent = ""; });
+document.getElementById("key1").addEventListener("click", key1SwitchFocus);
+document.getElementById("key4").addEventListener("click", key4RunStop);
+bindRepeat(document.getElementById("key2"), () => keyAdjust(+1));
+bindRepeat(document.getElementById("key3"), () => keyAdjust(-1));
+
+/* A6/A4：参数下发 + 两个开关（辅助堵转 0x003B / 实测统计 0x003C） */
+document.getElementById("btnParamWrite").addEventListener("click", writeParams);
+document.getElementById("btnAssist").addEventListener("click", async () => {
+  if (!lastImu) { log("err", "尚未读到参数，稍候再试"); return; }
+  const next = (lastImu[27] & 0x0001) ? 0 : 1;
+  await writeReg(0x003B, next, `振动辅助堵转 → ${next ? "开" : "关"}`);
+  pollOnce();
+});
+document.getElementById("btnTune").addEventListener("click", async () => {
+  if (!lastImu) { log("err", "尚未读到参数，稍候再试"); return; }
+  const on = (lastImu[28] & 0x0001) !== 0;
+  // 关的时候只要 bit0=0；开的时候同时 bit1 立即打一行，省一次等待
+  await writeReg(0x003C, on ? 0x0000 : 0x0003, `实测统计打印 → ${on ? "关" : "开"}`);
+  pollOnce();
+});
+
+if (!("serial" in navigator)) {
+  const w = document.getElementById("browserWarn");
+  w.style.display = "block";
+  w.textContent = "当前浏览器不支持 Web Serial API。请使用 Chrome / Edge（89+），并通过 http://localhost 或 https 访问本页面。";
+}
+
+navigator.serial?.addEventListener("disconnect", () => {
+  if (port) {
+    log("err", "串口已断开（USB 拔出？）");
+    disconnect();
+  }
+});
+
+setConnected(false, "未连接");
+log("info", "页面就绪。点击“连接串口”选择 USB 转 RS485 的 COM 口。");
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#F3F6FB</color>
+    <color name="card">#FFFFFF</color>
+    <color name="cardFocus">#EAF1FF</color>
+    <color name="logBg">#0F172A</color>
+    <color name="logText">#D7E3F4</color>
+    <color name="textMain">#1F2937</color>
+    <color name="textSub">#6B7280</color>
+    <color name="accent">#2F6FED</color>
+    <color name="accentDark">#1E4FBD</color>
+    <color name="green">#16A34A</color>
+    <color name="red">#DC2626</color>
+    <color name="stroke">#DDE3EC</color>
+</resources>

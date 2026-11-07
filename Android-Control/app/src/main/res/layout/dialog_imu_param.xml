@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A4/A5：六轴门限与现场可调参数（固件 >= 1.3，寄存器 0x0033~0x0036 + 0x003A~0x003C）。
+  注意：本布局是「竖向」列表，**不能**用 styles.xml 里的 RowLabelS/RowValueS
+  （那两个样式是给横向行用的 0dp + weight=1，竖排会被压成 0 宽而看不见）。
+  弹窗整体高度由 MainActivity.applyDialogHeight60() 统一设为屏幕高 60%，内部滚动。
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingLeft="14dp"
+        android:paddingRight="14dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="写完立即生效并掉电保存（实测统计开关不保存）"
+            android:textColor="@color/textSub"
+            android:textSize="11sp" />
+
+        <!-- 打滑 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="打滑门限　0.1%，150 = 15.0%"
+            android:textColor="@color/textSub"
+            android:textSize="12sp" />
+        <EditText
+            android:id="@+id/etSlipTh"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:backgroundTint="@color/accent"
+            android:gravity="center_vertical"
+            android:inputType="number"
+            android:paddingLeft="0dp"
+            android:paddingRight="0dp"
+            android:textSize="16sp" />
+
+        <!-- 振动 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="振动门限　mg，300 = 0.3g"
+            android:textColor="@color/textSub"
+            android:textSize="12sp" />
+        <EditText
+            android:id="@+id/etVibTh"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:backgroundTint="@color/accent"
+            android:gravity="center_vertical"
+            android:inputType="number"
+            android:paddingLeft="0dp"
+            android:paddingRight="0dp"
+            android:textSize="16sp" />
+
+        <!-- 倾斜 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="倾斜门限　0.1°，100 = 10.0°"
+            android:textColor="@color/textSub"
+            android:textSize="12sp" />
+        <EditText
+            android:id="@+id/etTiltTh"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:backgroundTint="@color/accent"
+            android:gravity="center_vertical"
+            android:inputType="number"
+            android:paddingLeft="0dp"
+            android:paddingRight="0dp"
+            android:textSize="16sp" />
+
+        <!-- 斜率 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="加减速斜率　rpm/s，600 = 默认"
+            android:textColor="@color/textSub"
+            android:textSize="12sp" />
+        <EditText
+            android:id="@+id/etAlphaLimit"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:backgroundTint="@color/accent"
+            android:gravity="center_vertical"
+            android:inputType="number"
+            android:paddingLeft="0dp"
+            android:paddingRight="0dp"
+            android:textSize="16sp" />
+
+        <!-- 过流 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="加热过流阈值　ADC raw，100~4095"
+            android:textColor="@color/textSub"
+            android:textSize="12sp" />
+        <EditText
+            android:id="@+id/etHeatOc"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:backgroundTint="@color/accent"
+            android:gravity="center_vertical"
+            android:inputType="number"
+            android:paddingLeft="0dp"
+            android:paddingRight="0dp"
+            android:textSize="16sp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="10dp"
+            android:background="@color/stroke" />
+
+        <CheckBox
+            android:id="@+id/cbAssist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="振动辅助堵转判定（M5：有振动时 3s→1s）"
+            android:textColor="@color/textMain"
+            android:textSize="12sp" />
+
+        <CheckBox
+            android:id="@+id/cbTune"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="串口周期打印 [TUNE] 实测统计（每 5s）"
+            android:textColor="@color/textMain"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvParamHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="实测整定（A2）建议先开统计打印，边跑边看串口 [TUNE] 行。"
+            android:textColor="@color/textSub"
+            android:textSize="10sp" />
+    </LinearLayout>
+</ScrollView>

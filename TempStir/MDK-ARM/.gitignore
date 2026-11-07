@@ -1,0 +1,5 @@
+# 1) 所有日志文件
+*.log
+
+# 2) Keil 编译输出目录（.o/.axf/.hex/.map 等构建产物）
+TempStirV1.0/

@@ -1,0 +1,3 @@
+Load "TempStirV1.0\\TempStirV1_0.axf" 
+Erase Done.Programming Done.Verify OK.Application running ...
+Flash Load finished at 15:25:50
