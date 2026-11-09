@@ -31,7 +31,6 @@ Temperature-Controlled-Blender
 - 人机界面：0.96" SSD1315 OLED + **4 个物理按键**（PC6/PC7/PC8/PC9，内部上拉、按下为低）。
 - 三通道并存：蓝牙 BLE 
 - 蓝牙芯片 **ECB01CV2-SOP8**（早期文档写的 ECB01C-TSSOP16 已更正），接 **USART2：PA2(TX→BL-RXD) / PA3(RX←BL-TXD)**，实测波特率 **9600 8N1**（上电 AT 自动识别，非手册默认的 115200）。
-  - 早期文档曾把 RS485 与蓝牙串口写反，已按原理图更正：**RS485 在 UART4 (PC10/PC11)**。
 - 蓝牙模块出厂名 `BT_ECB1A6B01BA2`，MAC `ECB1A6B01BA2`；不要用系统蓝牙"配对"。
 
 <img width="1260" height="3606" alt="7471e8e7c87160ca152dacf2247e7099" src="https://github.com/user-attachments/assets/30480b59-07d6-4568-a917-ac315c9649a1" />
