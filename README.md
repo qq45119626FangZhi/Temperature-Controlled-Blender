@@ -1,5 +1,5 @@
 # Temperature-Controlled-Blender
-STM32 温控搅拌机，分下位机C项目，上位机android, 全部由AI编程，使用最多的模型是DeepSeek
+STM32 温控搅拌机，分下位机C项目，上位机android, 由AI辅助编程，使用最多的模型是DeepSeek
 
 下位机
 
