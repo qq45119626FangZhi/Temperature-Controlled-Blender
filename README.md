@@ -22,6 +22,8 @@ TempStir
 
 下位机 
 Temperature-Controlled-Blender
+<img width="1190" height="620" alt="5c0878e454f9890c70e8adebddd8f827" src="https://github.com/user-attachments/assets/309e9157-f4e2-4baa-848c-d3df31182d01" />
+
 
 1. 产品与硬件要点
 
